@@ -53,7 +53,7 @@ Server=(localdb)\MSSQLLocalDB;Database=AziendeDati;Trusted_Connection=True;Multi
 | Fase | Contenuto | Stato |
 |---|---|---|
 | 0 | Setup soluzione multi-progetto + `/health` | ✅ |
-| 1 | Web API base, middleware, Dependency Injection | ⬜ |
+| 1 | Web API base, middleware, Dependency Injection | ✅ |
 | 2 | EF Core: DbContext, Fluent API, migrations, seed | ⬜ |
 | 3 | Repository, servizi applicativi, DTO | ⬜ |
 | 4 | LINQ e query di report | ⬜ |
