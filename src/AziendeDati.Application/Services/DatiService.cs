@@ -1,5 +1,6 @@
 using AziendeDati.Application.Dtos;
 using AziendeDati.Application.Mappings;
+using AziendeDati.Domain.Exceptions;
 using AziendeDati.Domain.Repositories;
 
 namespace AziendeDati.Application.Services;
@@ -28,15 +29,15 @@ public class DatiService : IDatiService
         return righe.Select(r => r.ToDto()).ToList();
     }
 
-    public async Task<List<DatoReadDto>?> GetByAziendaAsync(int aziendaId, CancellationToken ct = default)
+    public async Task<List<DatoReadDto>> GetByAziendaAsync(int aziendaId, CancellationToken ct = default)
     {
         // Prima si verifica che l'azienda ESISTA: senza questo controllo non
         // sapremmo distinguere "azienda senza dati" (200, lista vuota) da
-        // "azienda inesistente" (404).
+        // "azienda inesistente" (404 via NotFoundException, Fase 7).
         var esiste = await _aziendeRepository.ExistsAsync(aziendaId, ct);
         if (!esiste)
         {
-            return null;
+            throw new NotFoundException("Azienda", aziendaId);
         }
 
         var dati = await _datiRepository.GetByAziendaAsync(aziendaId, ct);

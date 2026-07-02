@@ -73,6 +73,16 @@ public class PingController : ControllerBase
         });
     }
 
+    /// <summary>Lancia un'eccezione di proposito (Fase 7, dimostrativo).</summary>
+    // Serve a verificare il gestore globale: 500 ProblemDetails con traceId,
+    // dettagli tecnici SOLO in Development, mai lo stack trace in Production.
+    [HttpGet("errore")]
+    public IActionResult LanciaErrore()
+    {
+        throw new InvalidOperationException(
+            "Eccezione di prova lanciata da /api/ping/errore per testare il GlobalExceptionHandler.");
+    }
+
     /// <summary>Mostra la configurazione email letta dall'Options pattern (Fase 5, dimostrativo).</summary>
     // Endpoint SOLO didattico: serve a verificare che GetEmailPort() rifletta
     // appsettings.json / variabili d'ambiente senza ricompilare. In un'app

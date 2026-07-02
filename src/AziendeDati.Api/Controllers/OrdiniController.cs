@@ -32,8 +32,8 @@ public class OrdiniController : ControllerBase
     [HttpGet("{id:int}")]
     public async Task<ActionResult<OrdineReadDto>> GetById(int id, CancellationToken ct)
     {
-        var ordine = await _service.GetByIdAsync(id, ct);
-        return ordine is null ? NotFound() : Ok(ordine);
+        // NotFoundException → 404 dal gestore globale (Fase 7).
+        return Ok(await _service.GetByIdAsync(id, ct));
     }
 
     /// <summary>Crea un ordine completo di righe (validato con FluentValidation).</summary>
@@ -60,16 +60,9 @@ public class OrdiniController : ControllerBase
             return ValidationProblem(ModelState);
         }
 
+        // Coerenza coi dati (azienda inesistente): dalla Fase 7 il servizio
+        // lancia ValidationException → 400 ProblemDetails dal gestore globale.
         var creato = await _service.CreateAsync(dto, ct);
-
-        // null dal servizio = AziendaId inesistente: non è "forma" ma coerenza
-        // coi dati → la segnaliamo comunque come errore di validazione (400).
-        if (creato is null)
-        {
-            ModelState.AddModelError(nameof(dto.AziendaId), $"L'azienda {dto.AziendaId} non esiste.");
-            return ValidationProblem(ModelState);
-        }
-
         return CreatedAtAction(nameof(GetById), new { id = creato.Id }, creato);
     }
 }

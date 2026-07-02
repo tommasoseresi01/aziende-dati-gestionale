@@ -43,11 +43,11 @@ public class AziendeController : ControllerBase
     [HttpGet("{id:int}")]
     public async Task<ActionResult<AziendaReadDto>> GetById(int id, CancellationToken ct)
     {
-        var azienda = await _service.GetByIdAsync(id, ct);
-
-        // Pattern null → 404: il servizio parla "dominio" (null = non esiste),
-        // il controller traduce in HTTP.
-        return azienda is null ? NotFound() : Ok(azienda);
+        // Dalla Fase 7 il controller NON gestisce più il "non trovato": se
+        // l'azienda non esiste, il servizio lancia NotFoundException e il
+        // GlobalExceptionHandler risponde 404 ProblemDetails. Il controller
+        // descrive solo il percorso felice — niente if, niente try/catch.
+        return Ok(await _service.GetByIdAsync(id, ct));
     }
 
     /// <summary>I dati misurati di un'azienda, con il nome della categoria.</summary>
@@ -57,10 +57,9 @@ public class AziendeController : ControllerBase
     [HttpGet("{id:int}/dati")]
     public async Task<ActionResult<List<DatoReadDto>>> GetDati(int id, CancellationToken ct)
     {
-        var dati = await _datiService.GetByAziendaAsync(id, ct);
-
-        // null = azienda inesistente → 404; lista vuota = azienda senza dati → 200 [].
-        return dati is null ? NotFound() : Ok(dati);
+        // Azienda inesistente → NotFoundException dal servizio → 404 globale;
+        // azienda senza dati → 200 con lista vuota.
+        return Ok(await _datiService.GetByAziendaAsync(id, ct));
     }
 
     /// <summary>Crea una nuova azienda.</summary>
@@ -81,15 +80,15 @@ public class AziendeController : ControllerBase
     [HttpPut("{id:int}")]
     public async Task<IActionResult> Update(int id, AziendaUpdateDto dto, CancellationToken ct)
     {
-        var aggiornata = await _service.UpdateAsync(id, dto, ct);
-        return aggiornata ? NoContent() : NotFound();
+        await _service.UpdateAsync(id, dto, ct);
+        return NoContent();
     }
 
     /// <summary>Elimina un'azienda (a cascata: utenti, dati e ordini collegati).</summary>
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> Delete(int id, CancellationToken ct)
     {
-        var eliminata = await _service.DeleteAsync(id, ct);
-        return eliminata ? NoContent() : NotFound();
+        await _service.DeleteAsync(id, ct);
+        return NoContent();
     }
 }

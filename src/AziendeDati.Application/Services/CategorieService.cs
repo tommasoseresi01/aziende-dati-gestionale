@@ -1,5 +1,6 @@
 using AziendeDati.Application.Dtos;
 using AziendeDati.Application.Mappings;
+using AziendeDati.Domain.Exceptions;
 using AziendeDati.Domain.Repositories;
 
 namespace AziendeDati.Application.Services;
@@ -20,10 +21,12 @@ public class CategorieService : ICategorieService
         return categorie.Select(c => c.ToReadDto()).ToList();
     }
 
-    public async Task<CategoriaReadDto?> GetByIdAsync(int id, CancellationToken ct = default)
+    public async Task<CategoriaReadDto> GetByIdAsync(int id, CancellationToken ct = default)
     {
-        var categoria = await _repository.GetByIdAsync(id, ct);
-        return categoria?.ToReadDto();
+        var categoria = await _repository.GetByIdAsync(id, ct)
+            ?? throw new NotFoundException("Categoria", id);
+
+        return categoria.ToReadDto();
     }
 
     public async Task<CategoriaReadDto> CreateAsync(CategoriaCreateDto dto, CancellationToken ct = default)
@@ -33,31 +36,24 @@ public class CategorieService : ICategorieService
         return categoria.ToReadDto();
     }
 
-    public async Task<bool> UpdateAsync(int id, CategoriaUpdateDto dto, CancellationToken ct = default)
+    public async Task UpdateAsync(int id, CategoriaUpdateDto dto, CancellationToken ct = default)
     {
-        var categoria = await _repository.GetByIdAsync(id, ct);
-        if (categoria is null)
-        {
-            return false;
-        }
+        var categoria = await _repository.GetByIdAsync(id, ct)
+            ?? throw new NotFoundException("Categoria", id);
 
         dto.ApplyTo(categoria);
         await _repository.UpdateAsync(categoria, ct);
-        return true;
     }
 
-    public async Task<bool> DeleteAsync(int id, CancellationToken ct = default)
+    public async Task DeleteAsync(int id, CancellationToken ct = default)
     {
-        var categoria = await _repository.GetByIdAsync(id, ct);
-        if (categoria is null)
-        {
-            return false;
-        }
+        var categoria = await _repository.GetByIdAsync(id, ct)
+            ?? throw new NotFoundException("Categoria", id);
 
-        // NOTA: se la categoria è usata da Dati/RigheOrdine, il DB blocca la
-        // DELETE (OnDelete Restrict, Fase 2) → oggi eccezione/500; nella Fase 7
-        // la trasformeremo in una risposta pulita.
+        // Se la categoria è referenziata da Dati/RigheOrdine, l'OnDelete
+        // Restrict (Fase 2) fa fallire la DELETE con DbUpdateException:
+        // il gestore globale la traduce in 409 Conflict con messaggio pulito
+        // (chiuso il TODO della Fase 3: niente più 500).
         await _repository.DeleteAsync(categoria, ct);
-        return true;
     }
 }

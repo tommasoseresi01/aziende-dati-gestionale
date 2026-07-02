@@ -11,6 +11,7 @@
 //                      mapping degli endpoint.
 // ============================================================================
 
+using AziendeDati.Api.Handlers;
 using AziendeDati.Api.Services;
 using AziendeDati.Application.Options;
 using AziendeDati.Application.Services;
@@ -42,6 +43,14 @@ builder.Services.AddControllers();
 // Health check integrati (introdotti nella Fase 0): endpoint /health per
 // load balancer e sistemi di monitoraggio.
 builder.Services.AddHealthChecks();
+
+// GESTIONE CENTRALIZZATA DELLE ECCEZIONI (Fase 7):
+// - AddProblemDetails abilita la produzione del formato standard ProblemDetails;
+// - AddExceptionHandler registra la NOSTRA strategia (GlobalExceptionHandler),
+//   che il middleware UseExceptionHandler (vedi pipeline) invocherà per ogni
+//   eccezione non gestita. Tutta la logica di mappatura sta nell'handler.
+builder.Services.AddProblemDetails();
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 
 // ----------------------------------------------------------------------------
 // REGISTRAZIONE DEL DbContext (Fase 2).
@@ -235,13 +244,18 @@ var app = builder.Build();
 // Fonte: https://learn.microsoft.com/aspnet/core/fundamentals/middleware/#middleware-order
 // ----------------------------------------------------------------------------
 
-// 1) GESTIONE ECCEZIONI — deve stare PER PRIMA. ★ PLACEHOLDER: si attiva in Fase 7 ★
+// 1) GESTIONE ECCEZIONI — PER PRIMA (placeholder della Fase 1, attivato in Fase 7).
 //    PERCHÉ prima: il middleware di exception handling avvolge TUTTI i
 //    successivi; solo stando in cima al "tubo" può catturare le eccezioni
 //    lanciate da qualunque punto a valle (routing, auth, controller) e
 //    trasformarle in una risposta JSON pulita (ProblemDetails) invece di un
-//    errore grezzo. Nella Fase 7 scriveremo:
-//      app.UseExceptionHandler(...);
+//    errore grezzo. La strategia (mappatura eccezione → status code, logging,
+//    niente stack trace in Production) sta in GlobalExceptionHandler.
+//    NOTA: in Development ASP.NET Core aggiungerebbe di suo la Developer
+//    Exception Page (pagina HTML con stack trace); registrando UseExceptionHandler
+//    esplicitamente, la nostra gestione JSON vale in OGNI ambiente — un solo
+//    comportamento da capire e testare.
+app.UseExceptionHandler();
 
 // 2) ROUTING — decide QUALE endpoint corrisponde alla richiesta (matching),
 //    ma NON lo esegue ancora: da qui in poi i middleware successivi sanno
