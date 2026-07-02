@@ -11,8 +11,13 @@
 //                      mapping degli endpoint.
 // ============================================================================
 
+using System.Text;
+using AziendeDati.Api.Auth;
 using AziendeDati.Api.Handlers;
 using AziendeDati.Api.Services;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
 using AziendeDati.Application.Options;
 using AziendeDati.Application.Services;
 using AziendeDati.Application.Validators;
@@ -126,6 +131,7 @@ builder.Services.AddScoped<IAziendeRepository, AziendeRepository>();
 builder.Services.AddScoped<ICategorieRepository, CategorieRepository>();
 builder.Services.AddScoped<IDatiRepository, DatiRepository>();
 builder.Services.AddScoped<IOrdiniRepository, OrdiniRepository>();
+builder.Services.AddScoped<IUtentiRepository, UtentiRepository>();
 builder.Services.AddScoped<IAziendeService, AziendeService>();
 builder.Services.AddScoped<ICategorieService, CategorieService>();
 builder.Services.AddScoped<IDatiService, DatiService>();
@@ -137,13 +143,111 @@ builder.Services.AddScoped<IOrdiniService, OrdiniService>();
 // torna a toccare questo file — stessa filosofia di ApplyConfigurationsFromAssembly.
 builder.Services.AddValidatorsFromAssemblyContaining<OrdineCreateDtoValidator>();
 
-// Servizi di autenticazione ("chi sei?") e autorizzazione ("cosa puoi fare?").
-// Oggi sono GUSCI VUOTI: nessuno schema configurato, nessuna policy. Li
-// registriamo già ora perché i middleware UseAuthentication/UseAuthorization
-// (vedi pipeline sotto) richiedono questi servizi per partire. Nella Fase 8
-// qui verranno configurati JWT Bearer e le policy sui ruoli.
-builder.Services.AddAuthentication();
-builder.Services.AddAuthorization();
+// ============================================================================
+// AUTENTICAZIONE JWT BEARER (Fase 8) — "chi sei?"
+//
+// Le impostazioni Jwt arrivano dall'Options pattern (Fase 5) e sono validate
+// all'avvio (Fase 6). Qui però ci servono SUBITO (per configurare lo schema),
+// quindi usiamo anche il binding manuale Get<T>() citato in Fase 5.
+// ============================================================================
+builder.Services.AddOptions<JwtOption>()
+    .Bind(builder.Configuration.GetSection(JwtOption.SectionName))
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
+
+builder.Services.AddOptions<OAuthOption>()
+    .Bind(builder.Configuration.GetSection(OAuthOption.SectionName));
+
+var jwtOption = builder.Configuration.GetSection(JwtOption.SectionName).Get<JwtOption>()
+    ?? throw new InvalidOperationException("Sezione 'Jwt' mancante in appsettings.json.");
+
+// AddAuthentication registra i servizi e fissa lo SCHEMA DI DEFAULT ("Bearer"):
+// è lo schema che UseAuthentication userà per ogni richiesta.
+builder.Services
+    .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    // AddJwtBearer insegna al middleware a: estrarre il token dall'header
+    // "Authorization: Bearer <jwt>", verificarne la firma e VALIDARLO secondo
+    // i TokenValidationParameters qui sotto. Token assente/invalido → la
+    // richiesta prosegue ANONIMA (sarà l'autorizzazione a rispondere 401).
+    .AddJwtBearer(options =>
+    {
+        // MapInboundClaims=false: i claim mantengono i NOMI ORIGINALI del JWT
+        // ("sub", "role"), senza la rinomina storica negli URI SOAP/WS-Fed
+        // (http://schemas.xmlsoap.org/...). Raccomandato dalla doc Microsoft:
+        // https://learn.microsoft.com/aspnet/core/security/authentication/claims
+        options.MapInboundClaims = false;
+
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            // FIRMA — il controllo più importante: garantisce che il token
+            // l'abbiamo emesso NOI e che nessuno l'ha manomesso. Senza questa
+            // verifica chiunque potrebbe fabbricarsi un token con i claim che vuole.
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOption.SigningKey)),
+
+            // ISSUER ("iss") — il token deve venire dal NOSTRO emettitore:
+            // un token firmato da altri (anche se con chiave compromessa
+            // altrove) non deve passare.
+            ValidateIssuer = true,
+            ValidIssuer = jwtOption.Issuer,
+
+            // AUDIENCE ("aud") — il token deve essere PER questa API: un token
+            // legittimo emesso per un altro servizio non va accettato qui
+            // (limita il "riuso" dei token tra sistemi).
+            ValidateAudience = true,
+            ValidAudience = jwtOption.Audience,
+
+            // SCADENZA ("exp"/"nbf") — un token scaduto è spazzatura. ClockSkew
+            // è la tolleranza per orologi non allineati tra server: il default
+            // è 5 minuti, lo riduciamo per far rispettare meglio la scadenza.
+            ValidateLifetime = true,
+            ClockSkew = TimeSpan.FromMinutes(1),
+
+            // Con MapInboundClaims=false dobbiamo dire noi quali claim usare
+            // per Identity.Name e per i RUOLI (RequireRole/IsInRole leggono
+            // il claim indicato da RoleClaimType).
+            NameClaimType = "sub",
+            RoleClaimType = "role"
+        };
+    });
+
+// ============================================================================
+// AUTORIZZAZIONE A POLICY (Fase 8) — "cosa puoi fare?"
+//
+// RUOLI vs CLAIM — qual è la differenza?
+// Un CLAIM è un'affermazione chiave/valore sull'identità ("role"="...",
+// "azienda_id"="1"). I RUOLI non sono un meccanismo separato: sono
+// SEMPLICEMENTE i claim del tipo indicato da RoleClaimType ("role" nel nostro
+// caso). Quindi:
+//  - RequireRole("x")        → zucchero sintattico: controlla il claim di
+//    ruolo; in più abilita helper come User.IsInRole("x").
+//  - RequireClaim("t", "v")  → generale: controlla QUALUNQUE claim, anche
+//    non-ruolo (es. RequireClaim("azienda_id", "1")).
+// I ruoli APPLICATIVI (tabella Ruoli nel DB) diventano claim "role" nel token
+// al momento dell'emissione — è così che il modello di dominio si aggancia
+// al modello di sicurezza.
+//
+// Le POLICY danno un NOME a un requisito: i controller citano il nome
+// ([Authorize(Policy = ...)]), la definizione sta qui in un punto solo.
+// ============================================================================
+builder.Services.AddAuthorization(options =>
+{
+    // Policy per la SCRITTURA: richiede il ruolo owner (via RequireRole).
+    options.AddPolicy(Policies.CompanyOwner,
+        policy => policy.RequireRole("data.company.owner"));
+
+    // Policy per la LETTURA: mostrata con RequireClaim (l'alternativa citata
+    // dalla specifica). Accetta ENTRAMBI i ruoli: chi può scrivere può anche
+    // leggere — senza questa riga un owner riceverebbe 403 sulle GET.
+    options.AddPolicy(Policies.CompanyReader,
+        policy => policy.RequireClaim("role", "data.company.reader", "data.company.owner"));
+});
+
+// CLAIMS TRANSFORMATION (Fase 8): Scoped perché dipende dal repository Scoped.
+builder.Services.AddScoped<IClaimsTransformation, MyClaimsTransformation>();
+
+// Il servizio che emette i token: Singleton (stateless, dipende solo da IOptions).
+builder.Services.AddSingleton<ITokenService, JwtTokenService>();
 
 // ----------------------------------------------------------------------------
 // I TRE LIFETIME della Dependency Injection — il concetto più chiesto all'esame.

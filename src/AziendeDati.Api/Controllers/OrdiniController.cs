@@ -1,13 +1,16 @@
+using AziendeDati.Api.Auth;
 using AziendeDati.Application.Dtos;
 using AziendeDati.Application.Services;
 using FluentValidation;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AziendeDati.Api.Controllers;
 
-/// <summary>CRUD (parziale) sugli Ordini. Route: /api/ordini.</summary>
+/// <summary>CRUD (parziale) sugli Ordini. Route: /api/ordini (letture reader, scritture owner).</summary>
 [ApiController]
 [Route("api/[controller]")]
+[Authorize(Policy = Policies.CompanyReader)]
 public class OrdiniController : ControllerBase
 {
     private readonly IOrdiniService _service;
@@ -38,6 +41,7 @@ public class OrdiniController : ControllerBase
 
     /// <summary>Crea un ordine completo di righe (validato con FluentValidation).</summary>
     [HttpPost]
+    [Authorize(Policy = Policies.CompanyOwner)]
     public async Task<ActionResult<OrdineReadDto>> Create(OrdineCreateDto dto, CancellationToken ct)
     {
         // VALIDAZIONE ESPLICITA con FluentValidation (approccio raccomandato:

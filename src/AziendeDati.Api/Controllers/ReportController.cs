@@ -1,12 +1,15 @@
+using AziendeDati.Api.Auth;
 using AziendeDati.Application.Dtos;
 using AziendeDati.Application.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AziendeDati.Api.Controllers;
 
-/// <summary>Endpoint di report/aggregazioni. Route: /api/report.</summary>
+/// <summary>Endpoint di report/aggregazioni. Route: /api/report (sola lettura → policy reader).</summary>
 [ApiController]
 [Route("api/[controller]")]
+[Authorize(Policy = Policies.CompanyReader)]
 public class ReportController : ControllerBase
 {
     private readonly IDatiService _service;

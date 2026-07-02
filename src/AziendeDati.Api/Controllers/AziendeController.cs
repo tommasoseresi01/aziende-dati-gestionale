@@ -1,16 +1,25 @@
+using AziendeDati.Api.Auth;
 using AziendeDati.Application.Dtos;
 using AziendeDati.Application.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AziendeDati.Api.Controllers;
 
-/// <summary>CRUD sulle Aziende. Route: /api/aziende.</summary>
+/// <summary>CRUD sulle Aziende. Route: /api/aziende (protetto, Fase 8).</summary>
 // PRINCIPIO "CONTROLLER SOTTILE": il controller fa SOLO da adattatore HTTP —
 // riceve la richiesta, chiama il servizio, traduce il risultato in status code.
 // NIENTE logica di business, NIENTE DbContext qui dentro: se un domani l'API
 // diventasse gRPC o un worker, i servizi si riuserebbero pari pari.
+//
+// AUTORIZZAZIONE (Fase 8): [Authorize] a livello di CLASSE = requisito minimo
+// per TUTTE le action (qui: policy reader → serve un token con ruolo reader o
+// owner). Le action di SCRITTURA aggiungono un secondo [Authorize] più
+// restrittivo: gli attributi si SOMMANO (AND), devono passare entrambi.
+// Senza token → 401 (non autenticato); token con ruolo sbagliato → 403 (vietato).
 [ApiController]
 [Route("api/[controller]")]
+[Authorize(Policy = Policies.CompanyReader)]
 public class AziendeController : ControllerBase
 {
     private readonly IAziendeService _service;
@@ -68,6 +77,7 @@ public class AziendeController : ControllerBase
     // nel body. CreatedAtAction costruisce tutto questo indicando l'action di
     // lettura e i suoi parametri di route.
     [HttpPost]
+    [Authorize(Policy = Policies.CompanyOwner)] // scrivere è roba da owner
     public async Task<ActionResult<AziendaReadDto>> Create(AziendaCreateDto dto, CancellationToken ct)
     {
         var creata = await _service.CreateAsync(dto, ct);
@@ -78,6 +88,7 @@ public class AziendeController : ControllerBase
     // PUT = sostituzione completa della risorsa → risposta 204 No Content
     // (il client ha già tutti i dati, non serve rimandarglieli).
     [HttpPut("{id:int}")]
+    [Authorize(Policy = Policies.CompanyOwner)]
     public async Task<IActionResult> Update(int id, AziendaUpdateDto dto, CancellationToken ct)
     {
         await _service.UpdateAsync(id, dto, ct);
@@ -86,6 +97,7 @@ public class AziendeController : ControllerBase
 
     /// <summary>Elimina un'azienda (a cascata: utenti, dati e ordini collegati).</summary>
     [HttpDelete("{id:int}")]
+    [Authorize(Policy = Policies.CompanyOwner)]
     public async Task<IActionResult> Delete(int id, CancellationToken ct)
     {
         await _service.DeleteAsync(id, ct);

@@ -1,5 +1,7 @@
+using AziendeDati.Api.Auth;
 using AziendeDati.Application.Dtos;
 using AziendeDati.Application.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AziendeDati.Api.Controllers;
@@ -8,8 +10,10 @@ namespace AziendeDati.Api.Controllers;
 // Dalla Fase 7 anche qui vale il pattern a eccezioni: il "non trovato" e i
 // conflitti sui vincoli non si gestiscono nel controller — ci pensa il
 // GlobalExceptionHandler (404 / 409 ProblemDetails).
+// Fase 8: letture per i reader (policy di classe), scritture solo owner.
 [ApiController]
 [Route("api/[controller]")]
+[Authorize(Policy = Policies.CompanyReader)]
 public class CategorieController : ControllerBase
 {
     private readonly ICategorieService _service;
@@ -32,6 +36,7 @@ public class CategorieController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Policy = Policies.CompanyOwner)]
     public async Task<ActionResult<CategoriaReadDto>> Create(CategoriaCreateDto dto, CancellationToken ct)
     {
         var creata = await _service.CreateAsync(dto, ct);
@@ -39,6 +44,7 @@ public class CategorieController : ControllerBase
     }
 
     [HttpPut("{id:int}")]
+    [Authorize(Policy = Policies.CompanyOwner)]
     public async Task<IActionResult> Update(int id, CategoriaUpdateDto dto, CancellationToken ct)
     {
         await _service.UpdateAsync(id, dto, ct);
@@ -47,6 +53,7 @@ public class CategorieController : ControllerBase
 
     /// <summary>Elimina una categoria (409 se ancora referenziata da dati o righe d'ordine).</summary>
     [HttpDelete("{id:int}")]
+    [Authorize(Policy = Policies.CompanyOwner)]
     public async Task<IActionResult> Delete(int id, CancellationToken ct)
     {
         await _service.DeleteAsync(id, ct);
