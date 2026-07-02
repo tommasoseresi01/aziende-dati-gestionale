@@ -57,7 +57,7 @@ Server=(localdb)\MSSQLLocalDB;Database=AziendeDati;Trusted_Connection=True;Multi
 | 2 | EF Core: DbContext, Fluent API, migrations, seed | ✅ |
 | 3 | Repository, servizi applicativi, DTO | ✅ |
 | 4 | LINQ e query di report | ✅ |
-| 5 | Configurazione e Options pattern | ⬜ |
+| 5 | Configurazione e Options pattern | ✅ |
 | 6 | Validazione (data annotations + FluentValidation) | ⬜ |
 | 7 | Gestione centralizzata eccezioni (ProblemDetails) | ⬜ |
 | 8 | Autenticazione JWT + OAuth2, policy, claims | ⬜ |

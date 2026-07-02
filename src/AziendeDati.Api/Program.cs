@@ -12,6 +12,7 @@
 // ============================================================================
 
 using AziendeDati.Api.Services;
+using AziendeDati.Application.Options;
 using AziendeDati.Application.Services;
 using AziendeDati.Domain.Repositories;
 using AziendeDati.Infrastructure;
@@ -159,6 +160,46 @@ builder.Services.AddAuthorization();
 // UGUALE o PIÙ LUNGO del suo.
 // ----------------------------------------------------------------------------
 builder.Services.AddSingleton<IClockService, ClockService>();
+
+// ----------------------------------------------------------------------------
+// OPTIONS PATTERN (Fase 5): configurazione fortemente tipizzata.
+//
+// Configure<T> fa due cose: (1) BINDING — lega la sezione "EmailService" di
+// appsettings.json alla classe EmailServiceOption (proprietà omonime, tipi
+// convertiti); (2) REGISTRAZIONE — rende disponibili IOptions<T>,
+// IOptionsSnapshot<T> e IOptionsMonitor<T> nel container DI.
+//
+// ALTERNATIVE per leggere la configurazione (citate per confronto):
+//  - var opt = new EmailServiceOption();
+//    builder.Configuration.GetSection("EmailService").Bind(opt);
+//    → binding manuale una tantum: comodo quando il valore serve QUI in
+//      Program.cs durante il bootstrap, non nei servizi via DI.
+//  - builder.Configuration.GetValue<int>("EmailService:Port")
+//    → lettura puntuale di UNA chiave (nota i ":" per scendere nella
+//      gerarchia JSON): ok per valori singoli, ma è una "magic string" —
+//      refusi scoperti solo a runtime.
+// L'Options pattern resta la scelta giusta per gruppi di impostazioni
+// consumati dai servizi.
+//
+// GERARCHIA DELLE SORGENTI (chi vince in caso di conflitto):
+// WebApplication.CreateBuilder registra le sorgenti IN ORDINE, e chi viene
+// DOPO SOVRASCRIVE chi viene prima (a parità di chiave):
+//   1. appsettings.json                    (base, committato)
+//   2. appsettings.{Environment}.json      (es. .Development.json: override per ambiente)
+//   3. User Secrets                        (solo in Development: segreti FUORI dal repo)
+//   4. Variabili d'ambiente                (es. EmailService__Port=2525 — il
+//                                           doppio underscore "__" sostituisce i ":")
+//   5. Argomenti da riga di comando        (--EmailService:Port=9999)
+// Quindi una variabile d'ambiente vince su TUTTI i file JSON: è così che in
+// produzione (container, cloud) si configura l'app senza toccare i file.
+// Fonte: https://learn.microsoft.com/aspnet/core/fundamentals/configuration/
+// ----------------------------------------------------------------------------
+builder.Services.Configure<EmailServiceOption>(
+    builder.Configuration.GetSection(EmailServiceOption.SectionName));
+
+// EmailService è Singleton: non ha stato per-richiesta e dipende solo da
+// IOptions<T> (a sua volta Singleton) — lifetime uguale o più lungo, regola ok.
+builder.Services.AddSingleton<IEmailService, EmailService>();
 
 var app = builder.Build();
 

@@ -1,4 +1,5 @@
 using AziendeDati.Api.Services;
+using AziendeDati.Application.Services;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AziendeDati.Api.Controllers;
@@ -35,6 +36,7 @@ public class PingController : ControllerBase
     // Il campo è readonly: la dipendenza si riceve UNA volta nel costruttore e
     // non cambia mai durante la vita del controller (immutabilità = meno bug).
     private readonly IClockService _clock;
+    private readonly IEmailService _emailService;
 
     // CONSTRUCTOR INJECTION — il pattern standard della DI in ASP.NET Core.
     // Non siamo noi a fare "new PingController(...)": a ogni richiesta HTTP è il
@@ -45,9 +47,10 @@ public class PingController : ControllerBase
     // PERCHÉ via costruttore e non "new ClockService()" dentro l'action:
     // il controller resta disaccoppiato dall'implementazione ed è testabile
     // passando un finto IClockService.
-    public PingController(IClockService clock)
+    public PingController(IClockService clock, IEmailService emailService)
     {
         _clock = clock;
+        _emailService = emailService;
     }
 
     /// <summary>Risponde con "pong" e la data/ora corrente.</summary>
@@ -67,6 +70,20 @@ public class PingController : ControllerBase
             Messaggio = "pong",
             DataOra = _clock.Now,       // ora locale del server, con offset
             DataOraUtc = _clock.UtcNow  // ora UTC (quella "da database")
+        });
+    }
+
+    /// <summary>Mostra la configurazione email letta dall'Options pattern (Fase 5, dimostrativo).</summary>
+    // Endpoint SOLO didattico: serve a verificare che GetEmailPort() rifletta
+    // appsettings.json / variabili d'ambiente senza ricompilare. In un'app
+    // reale non si espone la configurazione via API.
+    [HttpGet("email-config")]
+    public IActionResult GetEmailConfig()
+    {
+        return Ok(new
+        {
+            Port = _emailService.GetEmailPort(),
+            Configurazione = _emailService.DescriviConfigurazione()
         });
     }
 }
