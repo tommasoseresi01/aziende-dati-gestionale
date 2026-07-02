@@ -55,7 +55,7 @@ Server=(localdb)\MSSQLLocalDB;Database=AziendeDati;Trusted_Connection=True;Multi
 | 0 | Setup soluzione multi-progetto + `/health` | ✅ |
 | 1 | Web API base, middleware, Dependency Injection | ✅ |
 | 2 | EF Core: DbContext, Fluent API, migrations, seed | ✅ |
-| 3 | Repository, servizi applicativi, DTO | ⬜ |
+| 3 | Repository, servizi applicativi, DTO | ✅ |
 | 4 | LINQ e query di report | ⬜ |
 | 5 | Configurazione e Options pattern | ⬜ |
 | 6 | Validazione (data annotations + FluentValidation) | ⬜ |

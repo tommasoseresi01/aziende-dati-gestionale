@@ -12,7 +12,10 @@
 // ============================================================================
 
 using AziendeDati.Api.Services;
+using AziendeDati.Application.Services;
+using AziendeDati.Domain.Repositories;
 using AziendeDati.Infrastructure;
+using AziendeDati.Infrastructure.Repositories;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -64,6 +67,30 @@ var connectionString = builder.Configuration.GetConnectionString("AziendeDati")
 
 builder.Services.AddDbContext<AziendeDbContext>(options =>
     options.UseSqlServer(connectionString)); // provider SQL Server (pacchetto Microsoft.EntityFrameworkCore.SqlServer)
+
+// ----------------------------------------------------------------------------
+// REGISTRAZIONE REPOSITORY E SERVIZI APPLICATIVI (Fase 3).
+//
+// Qui la DI "chiude il cerchio" della Dependency Inversion: le interfacce
+// stanno in Domain (repository) e in Application (servizi), le implementazioni
+// in Infrastructure e Application — e SOLO questo file sa quale implementazione
+// concreta corrisponde a quale interfaccia. È l'unico punto in cui Api usa il
+// riferimento a Infrastructure (come promesso in ARCHITETTURA.md).
+//
+// PERCHÉ Scoped e non altro? Questi servizi dipendono (direttamente o in
+// catena) dal DbContext, che è Scoped:
+//  - Singleton è VIETATO: intrappolerebbe il DbContext per sempre (captive
+//    dependency, vedi il commento sui lifetime più su) e lo condividerebbe
+//    tra richieste concorrenti — proprio ciò che Scoped evita.
+//  - Transient funzionerebbe, ma senza vantaggi: creerebbe più istanze di
+//    servizio nella stessa richiesta, che comunque condividono lo STESSO
+//    DbContext scoped. Meglio la coerenza: tutta la catena
+//    controller → servizio → repository → DbContext vive "per richiesta".
+// ----------------------------------------------------------------------------
+builder.Services.AddScoped<IAziendeRepository, AziendeRepository>();
+builder.Services.AddScoped<ICategorieRepository, CategorieRepository>();
+builder.Services.AddScoped<IAziendeService, AziendeService>();
+builder.Services.AddScoped<ICategorieService, CategorieService>();
 
 // Servizi di autenticazione ("chi sei?") e autorizzazione ("cosa puoi fare?").
 // Oggi sono GUSCI VUOTI: nessuno schema configurato, nessuna policy. Li
