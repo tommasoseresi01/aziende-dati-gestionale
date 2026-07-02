@@ -14,10 +14,12 @@ namespace AziendeDati.Api.Controllers;
 public class AziendeController : ControllerBase
 {
     private readonly IAziendeService _service;
+    private readonly IDatiService _datiService;
 
-    public AziendeController(IAziendeService service)
+    public AziendeController(IAziendeService service, IDatiService datiService)
     {
         _service = service;
+        _datiService = datiService;
     }
 
     /// <summary>Elenco di tutte le aziende.</summary>
@@ -46,6 +48,19 @@ public class AziendeController : ControllerBase
         // Pattern null → 404: il servizio parla "dominio" (null = non esiste),
         // il controller traduce in HTTP.
         return azienda is null ? NotFound() : Ok(azienda);
+    }
+
+    /// <summary>I dati misurati di un'azienda, con il nome della categoria.</summary>
+    // Route ANNIDATA: "{id:int}/dati" si somma alla route del controller →
+    // GET /api/aziende/5/dati. Si usa quando la risorsa figlia ha senso solo
+    // dentro la padre ("i dati DELL'azienda 5").
+    [HttpGet("{id:int}/dati")]
+    public async Task<ActionResult<List<DatoReadDto>>> GetDati(int id, CancellationToken ct)
+    {
+        var dati = await _datiService.GetByAziendaAsync(id, ct);
+
+        // null = azienda inesistente → 404; lista vuota = azienda senza dati → 200 [].
+        return dati is null ? NotFound() : Ok(dati);
     }
 
     /// <summary>Crea una nuova azienda.</summary>

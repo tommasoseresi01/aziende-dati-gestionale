@@ -29,6 +29,14 @@ public class AziendeRepository : IAziendeRepository
             .ToListAsync(ct);
     }
 
+    public async Task<bool> ExistsAsync(int id, CancellationToken ct = default)
+    {
+        // AnyAsync genera un "SELECT CASE WHEN EXISTS(...)": il DB risponde
+        // true/false senza trasferire l'entità — più leggero di FindAsync
+        // quando serve solo sapere SE esiste.
+        return await _db.Aziende.AnyAsync(a => a.Id == id, ct);
+    }
+
     public async Task<Azienda?> GetByIdAsync(int id, CancellationToken ct = default)
     {
         // QUI niente AsNoTracking: chi chiama potrebbe modificare l'entità e

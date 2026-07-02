@@ -66,7 +66,30 @@ var connectionString = builder.Configuration.GetConnectionString("AziendeDati")
     ?? throw new InvalidOperationException("Connection string 'AziendeDati' mancante in appsettings.json.");
 
 builder.Services.AddDbContext<AziendeDbContext>(options =>
-    options.UseSqlServer(connectionString)); // provider SQL Server (pacchetto Microsoft.EntityFrameworkCore.SqlServer)
+{
+    options.UseSqlServer(connectionString); // provider SQL Server (pacchetto Microsoft.EntityFrameworkCore.SqlServer)
+
+    // ------------------------------------------------------------------------
+    // COME VEDERE L'SQL GENERATO DA EF CORE (Fase 4).
+    // EF logga già ogni comando SQL sul logger di ASP.NET Core (categoria
+    // "Microsoft.EntityFrameworkCore.Database.Command", livello Information):
+    // basta che appsettings.Development.json non la filtri.
+    // Qui aggiungiamo, SOLO in Development:
+    //  - EnableSensitiveDataLogging: mostra anche i VALORI dei parametri
+    //    (@__p_0 = 5) invece di "?". VIETATO in Production: i log
+    //    conterrebbero dati personali/sensibili degli utenti.
+    //  - EnableDetailedErrors: messaggi di errore più ricchi (costo extra).
+    // ALTERNATIVA "fai da te": options.LogTo(Console.WriteLine) manda i log
+    // dove vuoi tu (utile nei test/console app, ridondante qui perché il
+    // logger di ASP.NET stampa già su console).
+    // Fonte: https://learn.microsoft.com/ef/core/logging-events-diagnostics/
+    // ------------------------------------------------------------------------
+    if (builder.Environment.IsDevelopment())
+    {
+        options.EnableSensitiveDataLogging();
+        options.EnableDetailedErrors();
+    }
+});
 
 // ----------------------------------------------------------------------------
 // REGISTRAZIONE REPOSITORY E SERVIZI APPLICATIVI (Fase 3).
@@ -89,8 +112,10 @@ builder.Services.AddDbContext<AziendeDbContext>(options =>
 // ----------------------------------------------------------------------------
 builder.Services.AddScoped<IAziendeRepository, AziendeRepository>();
 builder.Services.AddScoped<ICategorieRepository, CategorieRepository>();
+builder.Services.AddScoped<IDatiRepository, DatiRepository>();
 builder.Services.AddScoped<IAziendeService, AziendeService>();
 builder.Services.AddScoped<ICategorieService, CategorieService>();
+builder.Services.AddScoped<IDatiService, DatiService>();
 
 // Servizi di autenticazione ("chi sei?") e autorizzazione ("cosa puoi fare?").
 // Oggi sono GUSCI VUOTI: nessuno schema configurato, nessuna policy. Li

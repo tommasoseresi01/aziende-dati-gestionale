@@ -26,6 +26,9 @@ public interface IAziendeRepository
     /// <summary>Tutte le aziende (sola lettura, senza tracking).</summary>
     Task<List<Azienda>> GetAllAsync(CancellationToken ct = default);
 
+    /// <summary>True se esiste un'azienda con questo Id (query leggera, niente caricamento entità).</summary>
+    Task<bool> ExistsAsync(int id, CancellationToken ct = default);
+
     /// <summary>Azienda per Id, TRACCIATA (pronta per essere modificata), o null.</summary>
     Task<Azienda?> GetByIdAsync(int id, CancellationToken ct = default);
 
