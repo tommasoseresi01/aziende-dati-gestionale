@@ -12,6 +12,8 @@
 // ============================================================================
 
 using AziendeDati.Api.Services;
+using AziendeDati.Infrastructure;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -34,6 +36,34 @@ builder.Services.AddControllers();
 // Health check integrati (introdotti nella Fase 0): endpoint /health per
 // load balancer e sistemi di monitoraggio.
 builder.Services.AddHealthChecks();
+
+// ----------------------------------------------------------------------------
+// REGISTRAZIONE DEL DbContext (Fase 2).
+//
+// La stringa di connessione NON si scrive nel codice ma in appsettings.json
+// (sezione "ConnectionStrings"): GetConnectionString("AziendeDati") la legge da
+// lì. Il "?? throw" fallisce SUBITO all'avvio se manca — meglio un errore
+// esplicito al bootstrap che un NullReferenceException alla prima query.
+//
+// AddDbContext registra AziendeDbContext con lifetime SCOPED (è il default e
+// NON va cambiato). PERCHÉ il DbContext DEVE essere Scoped:
+//  1. UNA ISTANZA PER RICHIESTA HTTP: tutti i servizi della stessa richiesta
+//     condividono lo stesso change tracker e la stessa unità di lavoro →
+//     un solo SaveChangesAsync atomico a fine operazione.
+//  2. NON È THREAD-SAFE: se fosse Singleton, richieste concorrenti userebbero
+//     la STESSA istanza da thread diversi → corruzione del change tracker ed
+//     eccezioni ("A second operation was started on this context...").
+//  3. Se fosse Transient, servizi diversi della stessa richiesta avrebbero
+//     contesti DIVERSI: tracking incoerente e transazioni spezzate.
+//  In più, a fine richiesta il container fa il Dispose del contesto per noi
+//  (la connessione torna al pool automaticamente).
+// Fonte: https://learn.microsoft.com/ef/core/dbcontext-configuration/#the-dbcontext-lifetime
+// ----------------------------------------------------------------------------
+var connectionString = builder.Configuration.GetConnectionString("AziendeDati")
+    ?? throw new InvalidOperationException("Connection string 'AziendeDati' mancante in appsettings.json.");
+
+builder.Services.AddDbContext<AziendeDbContext>(options =>
+    options.UseSqlServer(connectionString)); // provider SQL Server (pacchetto Microsoft.EntityFrameworkCore.SqlServer)
 
 // Servizi di autenticazione ("chi sei?") e autorizzazione ("cosa puoi fare?").
 // Oggi sono GUSCI VUOTI: nessuno schema configurato, nessuna policy. Li

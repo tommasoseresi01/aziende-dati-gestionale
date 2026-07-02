@@ -17,4 +17,8 @@
     <ProjectReference Include="..\AziendeDati.Domain\AziendeDati.Domain.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.9" />
+  </ItemGroup>
+
 </Project>
