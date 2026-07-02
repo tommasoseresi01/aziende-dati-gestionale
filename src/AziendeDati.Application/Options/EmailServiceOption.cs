@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace AziendeDati.Application.Options;
 
 /// <summary>
@@ -22,12 +24,16 @@ public sealed class EmailServiceOption
     public const string SectionName = "EmailService";
 
     // Proprietà con GET e SET pubblici: il binder le valorizza via reflection.
-    // I default ("", 0) valgono se la chiave manca nella configurazione:
-    // nella Fase 6 vedremo come VALIDARE le option all'avvio invece di
-    // scoprire a runtime che mancano.
+    // Le data annotations (Fase 6) rendono la configurazione AUTO-VALIDANTE:
+    // grazie a ValidateDataAnnotations + ValidateOnStart (Program.cs), se una
+    // chiave manca o è fuori range l'app si rifiuta di partire (fail fast).
+    [Required(ErrorMessage = "EmailService:Host è obbligatorio.")]
     public string Host { get; set; } = string.Empty;
 
+    [Range(1, 65535, ErrorMessage = "EmailService:Port deve essere una porta valida (1-65535).")]
     public int Port { get; set; }
 
+    [Required(ErrorMessage = "EmailService:From è obbligatorio.")]
+    [EmailAddress(ErrorMessage = "EmailService:From deve essere un indirizzo email valido.")]
     public string From { get; set; } = string.Empty;
 }

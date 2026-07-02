@@ -14,6 +14,8 @@
 using AziendeDati.Api.Services;
 using AziendeDati.Application.Options;
 using AziendeDati.Application.Services;
+using AziendeDati.Application.Validators;
+using FluentValidation;
 using AziendeDati.Domain.Repositories;
 using AziendeDati.Infrastructure;
 using AziendeDati.Infrastructure.Repositories;
@@ -114,9 +116,17 @@ builder.Services.AddDbContext<AziendeDbContext>(options =>
 builder.Services.AddScoped<IAziendeRepository, AziendeRepository>();
 builder.Services.AddScoped<ICategorieRepository, CategorieRepository>();
 builder.Services.AddScoped<IDatiRepository, DatiRepository>();
+builder.Services.AddScoped<IOrdiniRepository, OrdiniRepository>();
 builder.Services.AddScoped<IAziendeService, AziendeService>();
 builder.Services.AddScoped<ICategorieService, CategorieService>();
 builder.Services.AddScoped<IDatiService, DatiService>();
+builder.Services.AddScoped<IOrdiniService, OrdiniService>();
+
+// FLUENTVALIDATION (Fase 6): scandisce l'assembly di Application e registra
+// nel container OGNI classe che deriva da AbstractValidator<T>, come
+// IValidator<T> (Scoped di default). Aggiungendo un validator nuovo non si
+// torna a toccare questo file — stessa filosofia di ApplyConfigurationsFromAssembly.
+builder.Services.AddValidatorsFromAssemblyContaining<OrdineCreateDtoValidator>();
 
 // Servizi di autenticazione ("chi sei?") e autorizzazione ("cosa puoi fare?").
 // Oggi sono GUSCI VUOTI: nessuno schema configurato, nessuna policy. Li
@@ -194,8 +204,15 @@ builder.Services.AddSingleton<IClockService, ClockService>();
 // produzione (container, cloud) si configura l'app senza toccare i file.
 // Fonte: https://learn.microsoft.com/aspnet/core/fundamentals/configuration/
 // ----------------------------------------------------------------------------
-builder.Services.Configure<EmailServiceOption>(
-    builder.Configuration.GetSection(EmailServiceOption.SectionName));
+// AddOptions + ValidateDataAnnotations (Fase 6): le option si VALIDANO come i
+// DTO. ValidateOnStart anticipa il controllo all'AVVIO dell'app: se in
+// appsettings.json manca l'Host o la porta è fuori range, l'app NON PARTE e
+// dice subito quale chiave è sbagliata — molto meglio di scoprirlo alla prima
+// email fallita in produzione ("fail fast").
+builder.Services.AddOptions<EmailServiceOption>()
+    .Bind(builder.Configuration.GetSection(EmailServiceOption.SectionName))
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
 
 // EmailService è Singleton: non ha stato per-richiesta e dipende solo da
 // IOptions<T> (a sua volta Singleton) — lifetime uguale o più lungo, regola ok.

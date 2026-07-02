@@ -58,7 +58,7 @@ Server=(localdb)\MSSQLLocalDB;Database=AziendeDati;Trusted_Connection=True;Multi
 | 3 | Repository, servizi applicativi, DTO | ✅ |
 | 4 | LINQ e query di report | ✅ |
 | 5 | Configurazione e Options pattern | ✅ |
-| 6 | Validazione (data annotations + FluentValidation) | ⬜ |
+| 6 | Validazione (data annotations + FluentValidation) | ✅ |
 | 7 | Gestione centralizzata eccezioni (ProblemDetails) | ⬜ |
 | 8 | Autenticazione JWT + OAuth2, policy, claims | ⬜ |
 | 9 | Swagger / Swashbuckle | ⬜ |
