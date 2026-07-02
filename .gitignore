@@ -427,3 +427,11 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
+
+# ============================================================
+# File di lavoro didattici (Claude) — solo locali, non pubblicati
+# ============================================================
+CLAUDE.md
+ARCHITETTURA.md
+FASE-*-NOTE.md
+specifica-gestionale-enterprise-dotnet.md

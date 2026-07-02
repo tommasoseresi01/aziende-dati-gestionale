@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/AziendeDati.Api/AziendeDati.Api.csproj" />
+    <Project Path="src/AziendeDati.Application/AziendeDati.Application.csproj" />
+    <Project Path="src/AziendeDati.Domain/AziendeDati.Domain.csproj" />
+    <Project Path="src/AziendeDati.Functions/AziendeDati.Functions.csproj" />
+    <Project Path="src/AziendeDati.Infrastructure/AziendeDati.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/AziendeDati.Tests/AziendeDati.Tests.csproj" />
+  </Folder>
+</Solution>

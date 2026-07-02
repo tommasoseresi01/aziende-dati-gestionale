@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    AziendeDati.Domain — il CUORE della soluzione.
+    Contiene: entità di dominio (Azienda, Categoria, Dato, ...), enum, interfacce di dominio.
+    REGOLA: questo progetto NON deve dipendere da nulla (né da altri progetti, né da
+    pacchetti NuGet di infrastruttura come EF Core). PERCHÉ: il dominio è la parte più
+    stabile e più testabile del software; se dipendesse da EF Core o da ASP.NET,
+    ogni cambio di tecnologia lo costringerebbe a cambiare. Vedi ARCHITETTURA.md.
+
+    NOTA: Nullable, ImplicitUsings e TreatWarningsAsErrors sono ereditati
+    da Directory.Build.props nella radice del repository.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+  </PropertyGroup>
+
+</Project>

@@ -1,0 +1,43 @@
+<!--
+  Directory.Build.props — file speciale di MSBuild.
+
+  COSA FA: MSBuild lo cerca automaticamente risalendo le cartelle a partire da ogni
+  .csproj e lo importa PRIMA del contenuto del progetto. Tutto ciò che scriviamo qui
+  vale quindi per TUTTI i progetti della soluzione (Domain, Infrastructure, ecc.).
+
+  PERCHÉ SI FA COSÌ: le proprietà comuni (nullable, warning, ecc.) vanno definite in
+  un punto solo. L'alternativa — ripeterle in ogni .csproj — funziona, ma prima o poi
+  un progetto resta indietro e si creano incoerenze (es. un progetto con nullable
+  disabilitato che "inquina" gli altri). Regola generale: DRY anche nella build.
+
+  NOTA: se un singolo .csproj ridefinisce una proprietà, vince il .csproj
+  (viene importato dopo questo file).
+-->
+<Project>
+
+  <PropertyGroup>
+    <!--
+      Nullable reference types (C# 8+): il compilatore distingue "string" (mai null)
+      da "string?" (può essere null) e AVVISA se rischi un NullReferenceException.
+      PERCHÉ: il NullReferenceException è storicamente l'errore n.1 in .NET;
+      abilitarlo su tutta la soluzione ci obbliga a dichiarare le intenzioni sul null.
+    -->
+    <Nullable>enable</Nullable>
+
+    <!--
+      ImplicitUsings: il compilatore aggiunge da solo gli using più comuni
+      (System, System.Linq, System.Threading.Tasks, ...) in base al tipo di progetto.
+      PERCHÉ: meno righe ripetute in testa a ogni file; è il default dei template moderni.
+    -->
+    <ImplicitUsings>enable</ImplicitUsings>
+
+    <!--
+      TreatWarningsAsErrors=false: i warning NON bloccano la compilazione.
+      PERCHÉ (in questo progetto didattico): vogliamo VEDERE i warning e ragionarci,
+      senza che ogni avviso fermi la build. In un progetto enterprise "maturo" è
+      buona pratica metterlo a true per non accumulare warning ignorati.
+    -->
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+  </PropertyGroup>
+
+</Project>

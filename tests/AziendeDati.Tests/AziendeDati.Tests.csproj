@@ -1,0 +1,41 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    AziendeDati.Tests — test unitari e di integrazione (xUnit), sviluppati nella Fase 11.
+
+    Pacchetti (dal template ufficiale "dotnet new xunit"):
+    - xunit: il framework di test (attributi [Fact]/[Theory], assert).
+    - Microsoft.NET.Test.Sdk + xunit.runner.visualstudio: permettono a "dotnet test"
+      e a Visual Studio di SCOPRIRE ed ESEGUIRE i test.
+    - coverlet.collector: raccoglie la code coverage durante "dotnet test".
+
+    IsPackable=false: un progetto di test non va mai pubblicato come pacchetto NuGet.
+
+    Riferisce tutti i progetti src/ perché dovrà testare servizi (Application),
+    query (Infrastructure) ed endpoint HTTP (Api, via WebApplicationFactory).
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector" Version="6.0.4" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- "global using Xunit" implicito: evita di ripetere l'using in ogni file di test. -->
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\AziendeDati.Api\AziendeDati.Api.csproj" />
+    <ProjectReference Include="..\..\src\AziendeDati.Application\AziendeDati.Application.csproj" />
+    <ProjectReference Include="..\..\src\AziendeDati.Domain\AziendeDati.Domain.csproj" />
+    <ProjectReference Include="..\..\src\AziendeDati.Infrastructure\AziendeDati.Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>

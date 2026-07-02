@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    AziendeDati.Application — la logica applicativa: servizi (IAziendeService...),
+    DTO di input/output, validatori, interfacce dei servizi (dalla Fase 3).
+
+    RIFERIMENTO: Application → Domain, perché i servizi orchestrano le entità
+    di dominio. Application NON riferisce Infrastructure: dipenderà da
+    ASTRAZIONI (interfacce), non dall'implementazione concreta dell'accesso
+    ai dati. Vedi ARCHITETTURA.md.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\AziendeDati.Domain\AziendeDati.Domain.csproj" />
+  </ItemGroup>
+
+</Project>

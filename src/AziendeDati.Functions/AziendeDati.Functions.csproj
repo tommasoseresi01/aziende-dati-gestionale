@@ -1,0 +1,49 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    AziendeDati.Functions — progetto Azure Functions con il modello "isolated worker"
+    (sviluppato nella Fase 10: trigger HTTP e Queue).
+
+    COS'È: un'app console .NET che gira in un PROCESSO SEPARATO dal runtime di
+    Azure Functions (per questo "isolated"): il runtime riceve gli eventi (HTTP, coda...)
+    e li inoltra al nostro processo. PERCHÉ questo modello: ci dà pieno controllo su
+    versione .NET, Dependency Injection e middleware, ed è l'unico modello supportato
+    per .NET 10 (il vecchio modello "in-process" è legato a versioni LTS precedenti).
+    Fonte: https://learn.microsoft.com/azure/azure-functions/dotnet-isolated-process-guide
+
+    Questo progetto è stato creato a mano (senza template) con i file minimi richiesti
+    dalla guida ufficiale: .csproj, Program.cs, host.json, local.settings.json.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <!-- Versione del runtime di Azure Functions (v4 è la versione corrente). -->
+    <AzureFunctionsVersion>v4</AzureFunctionsVersion>
+    <!-- È un'app eseguibile (ha un Main generato dal Program.cs top-level), non una libreria. -->
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!--
+      host.json va copiato nella cartella di output: il runtime di Functions
+      lo legge da lì per configurarsi.
+    -->
+    <None Update="host.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <!--
+      local.settings.json contiene le impostazioni SOLO per l'esecuzione locale
+      (in Azure si usano le App Settings). Non va mai pubblicato (CopyToPublishDirectory=Never)
+      perché in progetti reali può contenere segreti/stringhe di connessione.
+    -->
+    <None Update="local.settings.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>Never</CopyToPublishDirectory>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Azure.Functions.Worker" Version="2.52.0" />
+    <PackageReference Include="Microsoft.Azure.Functions.Worker.Sdk" Version="2.0.7" />
+  </ItemGroup>
+
+</Project>

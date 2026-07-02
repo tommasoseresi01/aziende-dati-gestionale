@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    AziendeDati.Infrastructure — l'accesso ai dati: DbContext di EF Core,
+    configurazioni Fluent API, migrations, repository (dalla Fase 2).
+
+    RIFERIMENTO: Infrastructure → Domain, perché il DbContext mappa le entità
+    di dominio sulle tabelle. Mai il contrario: il dominio non deve sapere
+    COME viene persistito (oggi SQL Server, domani magari altro).
+    Vedi ARCHITETTURA.md.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\AziendeDati.Domain\AziendeDati.Domain.csproj" />
+  </ItemGroup>
+
+</Project>
