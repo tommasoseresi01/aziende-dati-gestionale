@@ -64,4 +64,8 @@ Server=(localdb)\MSSQLLocalDB;Database=AziendeDati;Trusted_Connection=True;Multi
 | 9 | Swagger / Swashbuckle | ✅ |
 | 10 | Azure Functions (HTTP + Queue trigger) | ✅ |
 | 11 | Test unitari e di integrazione | ✅ |
-| 12 | Frontend SPA React + TypeScript | ⬜ |
+| 12 | Frontend SPA React + TypeScript | ✅ |
+
+Il frontend è in [`frontend/aziende-dati-web`](frontend/aziende-dati-web) (React 19 + TypeScript + Vite):
+istruzioni di avvio nel suo [README](frontend/aziende-dati-web/README.md). Richiede la Web API in
+esecuzione e comunica con essa via HTTP/JSON (CORS abilitato per `http://localhost:5173`).

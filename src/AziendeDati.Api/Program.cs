@@ -335,6 +335,36 @@ builder.Services.AddOptions<EmailServiceOption>()
 builder.Services.AddSingleton<IEmailService, EmailService>();
 
 // ============================================================================
+// CORS (Fase 12) — permettere al frontend React (altra origine) di chiamare l'API.
+//
+// SAME-ORIGIN POLICY: per sicurezza il browser blocca le chiamate JavaScript
+// (fetch/XHR) verso un'ORIGINE diversa da quella della pagina. "Origine" =
+// schema + host + porta. In sviluppo il frontend gira su http://localhost:5173
+// (Vite) e l'API su http://localhost:5184: stesso host ma PORTA diversa →
+// origini diverse → senza CORS il browser rifiuterebbe le risposte
+// ("blocked by CORS policy").
+//
+// COS'È IL CORS: è il modo con cui il SERVER dichiara "mi fido di quest'origine".
+// Il browser manda un preflight (richiesta OPTIONS) e legge gli header
+// Access-Control-Allow-* che questo middleware aggiunge; se l'origine è permessa,
+// consegna la risposta al codice JS.
+//
+// ATTENZIONE: il CORS è un controllo del BROWSER, non una difesa del server
+// (curl/Postman lo ignorano). La vera protezione resta il JWT: qui apriamo SOLO
+// l'origine di sviluppo del frontend. In produzione l'origine (dominio reale)
+// andrebbe letta dalla configurazione, non scritta nel codice.
+// Fonte: https://learn.microsoft.com/aspnet/core/security/cors
+// ============================================================================
+const string corsFrontendDev = "FrontendDev";
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy(corsFrontendDev, policy =>
+        policy.WithOrigins("http://localhost:5173") // l'origine di Vite in sviluppo
+              .AllowAnyHeader()   // include Authorization (Bearer) e Content-Type
+              .AllowAnyMethod()); // GET, POST, PUT, DELETE e il preflight OPTIONS
+});
+
+// ============================================================================
 // SWAGGER / OPENAPI (Fase 9) — documentazione interattiva e test manuale dell'API.
 //
 // COS'È: Swashbuckle ispeziona a runtime controller, action e DTO e genera un
@@ -491,6 +521,14 @@ if (app.Environment.IsDevelopment())
 //    NOTA: WebApplication lo aggiungerebbe da solo in questa posizione;
 //    lo scriviamo esplicitamente per rendere visibile l'ordine (niente magia).
 app.UseRouting();
+
+// 2.5) CORS — DOPO UseRouting, PRIMA di UseAuthentication/UseAuthorization.
+//    PERCHÉ questa posizione: la policy CORS deve essere valutata prima che
+//    l'autorizzazione possa cortocircuitare la richiesta e prima degli endpoint.
+//    Se al preflight OPTIONS non arrivassero gli header CORS, il browser non
+//    invierebbe mai la vera richiesta (con il Bearer token) e il frontend
+//    vedrebbe solo errori CORS. Il nome richiama la policy registrata sopra.
+app.UseCors(corsFrontendDev);
 
 // 3) AUTENTICAZIONE — stabilisce CHI STA CHIAMANDO: legge le credenziali
 //    (nella Fase 8: il token JWT nell'header Authorization) e costruisce
