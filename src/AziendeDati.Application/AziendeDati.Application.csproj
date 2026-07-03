@@ -11,6 +11,19 @@
   -->
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
+
+    <!--
+      COMMENTI XML PER SWAGGER (Fase 9): li generiamo ANCHE qui perché i DTO
+      (i "modelli"/schemi dell'API) vivono in questo progetto. Così i loro
+      /// <summary> compaiono come descrizioni degli SCHEMI in Swagger, non solo
+      quelli dei metodi (che stanno nell'assembly Api). La specifica chiede di
+      documentare "metodi E modelli".
+      Il file AziendeDati.Application.xml viene copiato di fianco alla DLL nella
+      cartella di output dell'Api (che referenzia questo progetto), dove Program.cs
+      lo cerca. NoWarn 1591 silenzia l'avviso "manca commento XML" sui membri pubblici.
+    -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);1591</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>

@@ -11,6 +11,7 @@
 //                      mapping degli endpoint.
 // ============================================================================
 
+using System.Reflection;
 using System.Text;
 using AziendeDati.Api.Auth;
 using AziendeDati.Api.Handlers;
@@ -18,6 +19,7 @@ using AziendeDati.Api.Services;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using AziendeDati.Application.Dtos;
 using AziendeDati.Application.Options;
 using AziendeDati.Application.Services;
 using AziendeDati.Application.Validators;
@@ -26,6 +28,7 @@ using AziendeDati.Domain.Repositories;
 using AziendeDati.Infrastructure;
 using AziendeDati.Infrastructure.Repositories;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.OpenApi;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -331,6 +334,107 @@ builder.Services.AddOptions<EmailServiceOption>()
 // IOptions<T> (a sua volta Singleton) — lifetime uguale o più lungo, regola ok.
 builder.Services.AddSingleton<IEmailService, EmailService>();
 
+// ============================================================================
+// SWAGGER / OPENAPI (Fase 9) — documentazione interattiva e test manuale dell'API.
+//
+// COS'È: Swashbuckle ispeziona a runtime controller, action e DTO e genera un
+// documento OPENAPI (un JSON standard esposto su /swagger/v1/swagger.json) che
+// DESCRIVE l'API: rotte, parametri, tipi di richiesta/risposta, codici di stato.
+// Swagger UI è la pagina web (/swagger) che trasforma quel JSON in una console
+// per PROVARE gli endpoint dal browser, senza scrivere un client.
+// "OpenAPI" è la specifica (il formato del JSON); "Swagger" è la famiglia di
+// strumenti che la usano (Swashbuckle, Swagger UI). I due termini si confondono
+// spesso perché storicamente erano la stessa cosa.
+//
+// ATTENZIONE VERSIONI: Swashbuckle v10 usa Microsoft.OpenApi v2, che ha CAMBIATO
+// alcune API rispetto a v1: i tipi ora stanno nel namespace `Microsoft.OpenApi`
+// (non più `Microsoft.OpenApi.Models`) e AddSecurityRequirement vuole un DELEGATO
+// (document => requisito) invece di un oggetto. Il codice qui sotto è per v2.
+// Fonte: https://learn.microsoft.com/aspnet/core/tutorials/getting-started-with-swashbuckle
+//        https://github.com/domaindrivendev/Swashbuckle.AspNetCore/blob/master/docs/migrating-to-v10.md
+// ============================================================================
+
+// ID dello schema di sicurezza: lo definiamo una volta e lo RIUSIAMO sia nella
+// definizione sia nel requisito, così i due non possono divergere per un refuso.
+const string schemaSicurezzaId = "Bearer";
+
+builder.Services.AddSwaggerGen(options =>
+{
+    // 1) INFO DEL DOCUMENTO: titolo/versione/descrizione mostrati in cima alla UI.
+    //    "v1" è l'ID del documento e compare nell'URL (/swagger/v1/swagger.json).
+    options.SwaggerDoc("v1", new OpenApiInfo
+    {
+        Title = "AziendeDati API",
+        Version = "v1",
+        Description = "Gestionale multi-azienda — API didattica (progetto AziendeDati).\n\n"
+                    + "Per provare gli endpoint protetti: ottieni un JWT da POST /connect/token "
+                    + "(grant_type=client_credentials), poi premi **Authorize** e incolla il token."
+    });
+
+    // 2) COMMENTI XML → DESCRIZIONI IN SWAGGER.
+    //    Con <GenerateDocumentationFile>true</GenerateDocumentationFile> (nei .csproj)
+    //    il compilatore estrae i /// <summary> in file XML. Qui li diamo a
+    //    Swashbuckle così i summary diventano le descrizioni visibili nella UI.
+    //    Servono DUE file: quello dell'assembly Api (i METODI/controller) e quello
+    //    dell'assembly Application (i MODELLI/DTO) — la specifica chiede entrambi.
+    //    I percorsi si costruiscono da AppContext.BaseDirectory (la cartella di
+    //    output, bin/...): più robusto di un path fisso, funziona ovunque giri l'app.
+    var apiXml = Path.Combine(AppContext.BaseDirectory,
+        $"{Assembly.GetExecutingAssembly().GetName().Name}.xml");
+    if (File.Exists(apiXml))
+    {
+        // includeControllerXmlComments: true → usa come descrizione del GRUPPO anche
+        // il <summary> messo SULLA CLASSE del controller, non solo sulle action.
+        options.IncludeXmlComments(apiXml, includeControllerXmlComments: true);
+    }
+
+    // AziendaReadDto è un tipo "marcatore" per raggiungere l'assembly Application
+    // e ricavarne il nome (→ AziendeDati.Application.xml).
+    var modelliXml = Path.Combine(AppContext.BaseDirectory,
+        $"{typeof(AziendaReadDto).Assembly.GetName().Name}.xml");
+    if (File.Exists(modelliXml))
+    {
+        options.IncludeXmlComments(modelliXml);
+    }
+    // PERCHÉ le guardie `if (File.Exists(...))`: se un XML non fosse stato generato,
+    // IncludeXmlComments lancerebbe un'eccezione all'AVVIO. Con la guardia, al più
+    // la UI mostra qualche descrizione in meno — ma l'app parte ("degrada con grazia").
+
+    // 3) PULSANTE "AUTHORIZE" PER IL BEARER TOKEN — due passi:
+    //    (a) DEFINIRE lo schema di autenticazione; (b) RICHIEDERLO sugli endpoint.
+    //
+    //    (a) AddSecurityDefinition descrive COM'È fatta l'autenticazione.
+    //        Type = Http + Scheme = "bearer" è il modo corretto per un JWT Bearer.
+    //        VANTAGGIO rispetto al vecchio Type = ApiKey: nel dialog Authorize si
+    //        incolla SOLO il token "nudo" e Swagger aggiunge lui il prefisso
+    //        "Bearer " all'header Authorization; con ApiKey dovevi scriverlo a mano.
+    //        BearerFormat = "JWT" è solo informativo (etichetta mostrata nella UI).
+    options.AddSecurityDefinition(schemaSicurezzaId, new OpenApiSecurityScheme
+    {
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer",              // nome dello schema HTTP, minuscolo per RFC 7235
+        BearerFormat = "JWT",
+        In = ParameterLocation.Header,
+        Name = "Authorization",
+        Description = "Incolla qui SOLO il JWT (senza la parola 'Bearer'): "
+                    + "lo ottieni da POST /connect/token con client_id/client_secret."
+    });
+
+    //    (b) AddSecurityRequirement dichiara che gli endpoint VOGLIONO quello schema,
+    //        così la UI mostra il lucchetto e allega automaticamente il token.
+    //        NOVITÀ v10/OpenApi v2: vuole un DELEGATO `document => requisito` e la
+    //        chiave è un `OpenApiSecuritySchemeReference` (il vecchio
+    //        `Reference = new OpenApiReference{...}` NON esiste più). L'Id del
+    //        riferimento DEVE combaciare con quello dato ad AddSecurityDefinition.
+    options.AddSecurityRequirement(document => new OpenApiSecurityRequirement
+    {
+        // chiave = riferimento allo schema "Bearer" definito sopra;
+        // valore = elenco degli SCOPE OAuth2 richiesti. Un JWT Bearer non usa
+        // scope, quindi lista VUOTA [].
+        [new OpenApiSecuritySchemeReference(schemaSicurezzaId, document)] = []
+    });
+});
+
 var app = builder.Build();
 
 // ----------------------------------------------------------------------------
@@ -360,6 +464,26 @@ var app = builder.Build();
 //    esplicitamente, la nostra gestione JSON vale in OGNI ambiente — un solo
 //    comportamento da capire e testare.
 app.UseExceptionHandler();
+
+// 1.5) SWAGGER — SOLO in Development.
+//    UseSwagger espone il documento OpenAPI (/swagger/v1/swagger.json);
+//    UseSwaggerUI serve la pagina interattiva (/swagger) che lo consuma.
+//    PERCHÉ solo in Development: in Production pubblicare la mappa completa
+//    dell'API allarga la superficie d'attacco (chi la vuole online la protegge
+//    o la pubblica a parte). In alternativa si potrebbe lasciarla attiva ma
+//    dietro autorizzazione con MapSwagger().RequireAuthorization().
+//    PERCHÉ QUI, prima di UseAuthentication/UseAuthorization: così la UI è
+//    raggiungibile SENZA token; sarà poi il pulsante Authorize ad allegare il
+//    JWT alle chiamate verso gli endpoint protetti.
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI(options =>
+    {
+        // Etichetta + URL del documento nel menù a tendina in alto a destra.
+        options.SwaggerEndpoint("/swagger/v1/swagger.json", "AziendeDati API v1");
+    });
+}
 
 // 2) ROUTING — decide QUALE endpoint corrisponde alla richiesta (matching),
 //    ma NON lo esegue ancora: da qui in poi i middleware successivi sanno
