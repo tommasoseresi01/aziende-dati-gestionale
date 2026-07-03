@@ -63,5 +63,5 @@ Server=(localdb)\MSSQLLocalDB;Database=AziendeDati;Trusted_Connection=True;Multi
 | 8 | Autenticazione JWT + OAuth2, policy, claims | ✅ |
 | 9 | Swagger / Swashbuckle | ✅ |
 | 10 | Azure Functions (HTTP + Queue trigger) | ✅ |
-| 11 | Test unitari e di integrazione | ⬜ |
+| 11 | Test unitari e di integrazione | ✅ |
 | 12 | Frontend SPA React + TypeScript | ⬜ |
