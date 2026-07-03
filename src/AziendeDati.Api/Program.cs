@@ -520,3 +520,13 @@ app.MapHealthChecks("/health");
 // Run() avvia il web server Kestrel e BLOCCA il thread finché l'app non viene
 // fermata (Ctrl+C): da qui in poi l'app resta in ascolto delle richieste HTTP.
 app.Run();
+
+// ----------------------------------------------------------------------------
+// TEST DI INTEGRAZIONE (Fase 11): con i "top-level statements" il compilatore
+// genera una classe Program INTERNA e senza nome utilizzabile. WebApplicationFactory
+// <Program> (Microsoft.AspNetCore.Mvc.Testing) però ha bisogno di un tipo PUBBLICO
+// come punto d'ingresso per avviare l'app in memoria. Dichiarare qui una
+// "partial class Program" pubblica e vuota la rende visibile al progetto di test,
+// senza aggiungere codice: è il pattern raccomandato dalla doc Microsoft.
+// Fonte: https://learn.microsoft.com/aspnet/core/test/integration-tests#basic-tests-with-the-default-webapplicationfactory
+public partial class Program { }
