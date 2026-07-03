@@ -42,8 +42,28 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Core del worker isolated + SDK (generatori che scoprono le [Function]). -->
     <PackageReference Include="Microsoft.Azure.Functions.Worker" Version="2.52.0" />
     <PackageReference Include="Microsoft.Azure.Functions.Worker.Sdk" Version="2.0.7" />
+    <!--
+      ESTENSIONI = i "connettori" ai vari trigger/binding. Ogni tipo di trigger
+      sta in un pacchetto separato: aggiungi solo quelli che usi.
+      - Extensions.Http: trigger HTTP (HttpRequestData/HttpResponseData).
+      - Extensions.Storage.Queues: trigger e output binding verso le code di
+        Azure Storage (in locale emulate da Azurite).
+    -->
+    <PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.Http" Version="3.3.0" />
+    <PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.Storage.Queues" Version="5.5.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!--
+      RIFERIMENTO a Infrastructure: la Function riusa AziendeDbContext ed EF Core
+      per salvare i Dati nello STESSO database della Web API. È così che la Function
+      "si integra" con l'API restando nello stesso stack .NET (vedi Program.cs).
+      Come l'Api, anche questo progetto è un HOST: può conoscere Infrastructure.
+    -->
+    <ProjectReference Include="..\AziendeDati.Infrastructure\AziendeDati.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>
